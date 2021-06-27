@@ -1,0 +1,448 @@
+Importing the Relevant Libraries
+import pandas as pd
+from matplotlib import pyplot
+import statistics
+from scipy import stats
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+Data = pd.read_csv('train_s3TEQDk.csv')
+
+Test = pd.read_csv('test_mSzZ8RL.csv')
+
+Data1=Data
+
+target = Data['Is_Lead']
+
+Data = Data.drop(['Is_Lead','ID','Region_Code'],axis=1)
+
+Test = Test.drop(['ID','Region_Code'],axis=1)
+Data Inspection
+### Step 2: Data Inspection# 245725 entries,(total 8 columns): spreated the target value
+
+Data.info()
+#105312  entries,(total 8 columns):
+
+Test.info()
+Data.describe()
+Data.head()
+print("Lets look at Ratio of majority to minority")
+print(target.value_counts())
+print('imbalanced data set')
+print('******************************************')
+
+print('0 : Customer is not interested')
+
+print('1 : Customer is interested')
+#pie chart for the target value
+
+plt.figure(figsize= (12,7))
+df_target= target.value_counts()
+plt.pie(df_target, labels= df_target.index, autopct= '%.1f%%', startangle= 90, explode= [0.05, 0.05], shadow = True )
+plt.legend(['Customer is not interested', 'Customer is interested'])
+plt.title('Target', fontsize= 16)
+
+plt.show()
+#number of unique values in Data 
+Data.apply(pd.Series.nunique)
+Test.apply(pd.Series.nunique)
+#lot of extra_cat that will hamper the model
+pd.crosstab(Data1['Region_Code'], Data1['Is_Lead'],normalize='columns')
+## segregating as per the type - Train
+
+quantitative_data = [i for i in Data if Data[i].dtype == np.int64]
+
+print("A total of {} quantitative columns are in data".format(len(quantitative_data)))
+print('\n',quantitative_data,'\n')
+
+qualitative_data = [i for i in Data if Data[i].dtype == np.object]
+
+print("A total of {} object columns are in data".format(len(qualitative_data)))
+
+print('\n',qualitative_data,'\n')
+## segregating as per the type - Test
+
+quantitative_data = [i for i in Test if Test[i].dtype == np.int64]
+
+print("A total of {} quantitative columns are in data".format(len(quantitative_data)))
+print('\n',quantitative_data,'\n')
+
+qualitative_data = [i for i in Test if Test[i].dtype == np.object]
+
+print("A total of {} object columns are in data".format(len(qualitative_data)))
+
+print('\n',qualitative_data,'\n')
+#NullValues with the help of Heatmap
+
+sns.heatmap(Data.isnull(), cmap="inferno")
+plt.figure(figsize=(16,9))
+#NullValues with the help of Heatmap
+sns.heatmap(Test.isnull(), cmap="inferno")
+plt.figure(figsize=(16,9))
+pd.crosstab(Data1['Occupation'], Data1['Is_Lead'],normalize='columns')
+Self_Employed statistically have the highest chances of Lead
+
+pd.crosstab(Data1['Is_Active'], Data1['Is_Lead'],normalize='columns')
+pd.crosstab(Data1['Channel_Code'], Data1['Is_Lead'],normalize='columns')
+#will set the order for encoding as per the approval rate
+X3 and X2 are the most important group, while X-4 has slight chances of conversion
+
+pd.crosstab(Data1['Gender'], Data1['Is_Lead'],normalize='columns')
+#First sum and order all null values for each variable
+
+percent = (Data.isnull().sum()/Data.isnull().count()).sort_values(ascending=False) 
+dataType = Data.dtypes
+null = Test.isnull().sum().sort_values(ascending=False)
+
+missing_variables = pd.concat([null, percent,dataType], axis=1, keys=['Total', 'percent','Data Type'])
+missing_variables = missing_variables.head(19)
+missing_variables
+#First sum and order all null values for each variable
+percent_test = (Test.isnull().sum()/Test.isnull().count()).sort_values(ascending=False) 
+null_test = Test.isnull().sum().sort_values(ascending=False)
+
+dataType_test = Test.dtypes
+missing_variables_test = pd.concat([null_test, percent_test,dataType_test], axis=1, keys=['Total', 'percent','Data Type'])
+missing_variables_test = missing_variables_test.head(19)
+missing_variables_test
+Credit_product is the only feature from object ("category ") that has missing values
+
+In both Test and Train data set the Credit_product has many missing values
+
+Feature analysis through plots
+#the distrubtion of activty over age for being the potential lead
+
+sns.catplot(x="Is_Active", y="Age" , hue="Is_Lead",kind="bar",data=Data1)
+plt.show()
+#variation of vintage on the Lead wrt to Channel divion the cx as per the bank records
+
+sns.catplot(x="Is_Lead", y="Vintage", hue="Channel_Code", kind="box",data=Data1).set(title='Spread of different Channel wrt Vintage over the Target Var:Is Lead ')
+plt.show()
+sns.FacetGrid(Data1,hue='Is_Lead',size=5).map(sns.distplot,'Avg_Account_Balance').add_legend().set(title='Distribution plot for Avg_Account_Balance over the Taget - Potential lead')
+plt.show()
+
+#Avg_Account_Balance is very skewd 
+sns.FacetGrid(Data1,hue='Is_Lead',size=5).map(sns.distplot,'Age').add_legend().set(title='Distribution plot for age over the Taget - Potential lead')
+plt.show()
+Customers from the following group are the statistically potential range for our target audience :
+
+1) Customers from from the age bracket of 30 to 55 years will be statistically important Age bracket for our target audience
+
+2) Customers who have a vintage period over the range of 2 years from all Acquisition Channels are a potential target
+
+3) The customers who are not having credit card earlier might show slight disinterest and might not be a potential target
+
+4) Customers from from the age bracket of 30 to 55 years
+
+def findind_outliers(x):
+    q1 = np.percentile(x, 25)
+    q3 = np.percentile(x, 75)
+    iqr = q3-q1 
+    floor = q1 - 1.5*iqr
+    ceiling = q3 + 1.5*iqr
+    outlier_indices = list(x.index[(x < floor)|(x > ceiling)])
+    outlier_values = list(x[outlier_indices])
+    
+    return outlier_values, outlier_indices 
+indices,values = findind_outliers(Data['Age'])
+print(np.sort(values))
+indices,values = findind_outliers(Data['Avg_Account_Balance'])
+print(np.sort(values))
+def plot_histogram(x):
+    plt.hist(x, color='gray', alpha=0.5)
+    plt.title("Histogram of '{var_name}'".format(var_name=x.name))
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.show()
+plot_histogram(Data['Age'])
+plot_histogram(Data['Vintage'])
+plot_histogram(Data['Avg_Account_Balance'])
+#imputing for the DATA set which has teh target value so that depdence of both catagorical valused with imputed values can be viewed
+from sklearn.impute import SimpleImputer
+
+imp = SimpleImputer(missing_values=np.nan,strategy='most_frequent')
+
+Data1['Credit_Product'] = imp.fit_transform(Data1[['Credit_Product']]).ravel()
+Data1['Credit_Product']=pd.DataFrame(Data1['Credit_Product'])
+sns.factorplot("Is_Lead", col = "Credit_Product", data = Data1[Data1.Credit_Product.notnull()],kind = "count");
+plt.show()
+#Checking the spread Age and Gender for people who have credit card and are potential target
+
+sns.catplot(x="Age", y="Is_Lead",
+                hue="Credit_Product", row="Gender",
+                data=Data1,
+                orient="h", height=4, aspect=3,
+                kind="violin", dodge=True, cut=0, bw=.5)
+plt.show()
+sns.set_style("whitegrid")
+sns.FacetGrid(Data1, hue="Is_Lead", size=9) \
+   .map(plt.scatter, "Avg_Account_Balance", "Age") \
+   .add_legend()
+plt.title('Speard of Account Balance wrt Age over the target that generate "to Lead interest"')
+plt.show()
+#checking the occupation type along with balance and which type has likiness of conversion for lead
+
+sns.catplot(x="Occupation", y="Avg_Account_Balance", hue="Is_Lead",data=Data1)
+plt.show()
+From the above graph we can infer that the customers from all the age group and occupation sector who are having there savings in our bank in the past 12 Months around the range of "250000-785000" are are statistically interested, among them the occupation group who are Self_Employed statistically have the highest chances of Lead , while the "Entrepreneur"(from all avg_account_balance) are most important target audience among the portienal lead potential lead.
+
+#putting them in the frameowrk of datatype to do encoding after imputing , finind var and passing float and integer for imputing - TRAIN DATA
+
+Categorical = Data.select_dtypes(include='object') 
+IntegerData = Data.select_dtypes(include='int64') 
+#putting them in the frameowrk of datatyp to do encoding after imputing , finind var and passing float and integer for imputing - Test DATA
+
+Categorical_Test = Test.select_dtypes(include='object') 
+IntegerData_Test = Test.select_dtypes(include='int64') 
+#using the concept of VIF to check for redundant features 
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+VIF = pd.DataFrame()
+IntegerData['Intercept'] = 1
+VIF['Independent Variables'] = IntegerData.columns
+VIF['VIF'] = [vif(IntegerData.values, i) for i in range(IntegerData.shape[1])]
+VIF = VIF.set_index('Independent Variables').drop(index = 'Intercept').T
+VIF
+There are no multicollinearity among the Integer values
+
+IntegerData = IntegerData.drop(['Intercept'],axis=1)
+#cross checking for collinearity with heatmap
+m = np.ones_like(Data1.drop(columns = 'Is_Lead').corr())
+m[np.tril_indices_from(m)]=0
+plt.figure(figsize = (15,10))
+sns.heatmap(Data1.drop(columns = 'Is_Lead').corr(), annot= True, annot_kws= {'size' : 12},
+           cmap = 'Blues', fmt = '.2f', linewidths= 2, linecolor='white', mask = m,vmin=-1)
+plt.show();
+Data Cleaning
+#imputing for the Test case dataset 
+
+from sklearn.impute import SimpleImputer
+
+imp = SimpleImputer(missing_values=np.nan,strategy='most_frequent')
+
+Categorical_Test['Credit_Product'] = imp.fit_transform(Categorical_Test[['Credit_Product']]).ravel()
+Categorical_Test['Credit_Product']=pd.DataFrame(Categorical_Test['Credit_Product'])
+#imputing for the Test case dataset 
+
+imp = SimpleImputer(missing_values=np.nan,strategy='most_frequent')
+
+Categorical['Credit_Product'] = imp.fit_transform(Categorical[['Credit_Product']]).ravel()
+Categorical['Credit_Product']=pd.DataFrame(Categorical['Credit_Product'])
+#encoding for the Train case dataset -one Hot encoding followed by one-hot as many features dont have order 
+
+from sklearn.preprocessing import LabelEncoder
+
+var_mod = ['Occupation', 'Channel_Code']
+le = LabelEncoder()
+for i in var_mod:
+    Categorical[i] = le.fit_transform(Categorical[i])
+    
+#One Hot Coding:
+
+from sklearn.preprocessing import OneHotEncoder
+
+Categorical = pd.get_dummies(Categorical, columns=['Credit_Product', 'Is_Active', 'Gender'], drop_first=True)
+#encoding for the Train case dataset -one Hot encoding followed by one-hot as many features dont have order 
+
+
+var_mod = ['Occupation', 'Channel_Code']
+le = LabelEncoder()
+for i in var_mod:
+    Categorical_Test[i] = le.fit_transform(Categorical_Test[i])
+    
+#One Hot Coding:
+
+from sklearn.preprocessing import OneHotEncoder
+
+Categorical_Test = pd.get_dummies(Categorical_Test, columns=['Credit_Product', 'Is_Active', 'Gender'], drop_first=True)
+for i in IntegerData:
+    IntegerData[i] = np.log(IntegerData[i])
+#addressing the skewness
+plot_histogram(IntegerData['Age'])
+features = pd.concat([Categorical,IntegerData],axis=1)
+features_Test = pd.concat([Categorical_Test,IntegerData_Test],axis=1)
+_, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 4))
+
+sns.countplot(x="Occupation", data=Data1, ax=axes[0])
+sns.countplot(x="Is_Active", data=Data1, ax=axes[1]);
+#checking the distribution of the test data before delopyment 
+
+figsize=(15,30)
+features_Test.hist(figsize=(15,30),layout=(9,3))
+plt.show()
+Model selection and performance
+from sklearn import model_selection
+from sklearn.model_selection import KFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix, recall_score, precision_score, f1_score, roc_auc_score,roc_curve
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+#data is unbalanced, we can fix this with SMOTE and its better to split after train-test split to prevent any data leakgage  : https://www.kaggle.com/joshuaswords/awesome-hr-data-visualization-prediction
+
+from imblearn.over_sampling import SMOTE
+
+X_train,X_test,y_train,y_test = train_test_split(features,target,test_size=0.2,random_state=34)
+
+oversample = SMOTE()
+
+X_train, y_train = oversample.fit_resample(X_train, y_train.ravel())
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.fit_transform(X_test)
+features_Test = sc.fit_transform(features_Test)
+features_Test = pd.DataFrame(features_Test)
+DecisionTreeClassifier
+
+classifier1 = DecisionTreeClassifier(max_depth=3)
+classifier1.fit(X_train,y_train)
+y_predict = classifier1.predict(X_test)
+DecisionTree=roc_auc_score(y_test,y_predict)*100
+from sklearn import tree
+fig = plt.figure(figsize=(25,20))
+_ = tree.plot_tree(classifier1,feature_names=features.columns,filled=True)
+Random-Forest_classifier with 50 n_estimators
+
+rfc=RandomForestClassifier(n_estimators=50) 
+rfc.fit(X_train,y_train)
+y_predict_rfc = rfc.predict(X_test)
+#if the accuracy is less than decision tree, then consider the model alone
+Random_Forest=roc_auc_score(y_test,y_predict_rfc)*100
+AdaBoostClassifier
+
+classifier = AdaBoostClassifier(n_estimators=50)
+classifier.fit(X_train, y_train)
+predictions_ada = classifier.predict(X_test)
+AdaBoost=roc_auc_score(y_test,predictions_ada)*100
+GaussianNB
+
+gnb = GaussianNB()
+gnb.fit(X_train,y_train)
+y_preds_gnb = gnb.predict(X_test)
+Gaussian=roc_auc_score(y_test,y_preds_gnb)*100
+LogisticRegression
+
+logmodel=LogisticRegression()
+logmodel.fit(X_train,y_train)
+predictions = logmodel.predict(X_test)
+accuracy_score(y_test,predictions)*100
+Logistic=roc_auc_score(y_test,predictions)*100
+## function to get confusion matrix in a proper format
+def draw_cm( y_test, predicted ):
+    cm = confusion_matrix( y_test, predictions)
+    sns.heatmap(cm, annot=True,  fmt='.0f', xticklabels = [0,1] , yticklabels = [0,1] )
+    plt.ylabel('Observed')
+    plt.xlabel('Predicted')
+    plt.show()
+feature_imp = pd.Series(rfc.feature_importances_,index=features.columns).sort_values(ascending=False)
+
+plt.figure(figsize=(15,20))
+
+# Creating a bar plot
+sns.barplot(x=feature_imp, y=feature_imp.index)
+
+# Add labels to your graph
+plt.xlabel('Feature Importance Score')
+plt.ylabel('Features')
+plt.title("Visualizing Important Features")
+plt.show()
+draw_cm(y_test,predictions_ada);
+name =['Logistic','Gaussian','AdaBoost','RandomForest','DecisionTree']
+Results_Split = [Logistic,Gaussian,AdaBoost,Random_Forest,DecisionTree]
+Results_with_Train_Test = list(zip(name,Results_Split))
+Results_with_Train_Test
+models = []
+models.append(('LogisticRegression', logmodel))
+models.append(('DecisionTreeClassifier', classifier1 ))
+models.append(('GaussianNB', gnb ))
+models.append(('AdaBoostClassifier', classifier))
+names = []
+results = []
+#The 10-fold cross validation procedure is used to evaluate each algorithm,same random seed to ensure that the same splits happen
+scoring = 'accuracy'
+for name, model in models:
+
+    kfold = model_selection.KFold(n_splits=5)
+    cv_results = model_selection.cross_val_score(model, features, target, cv=kfold, scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+    print(msg)
+ 
+# boxplot algorithm comparison
+fig = plt.figure(figsize=(12,5))
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot()
+plt.boxplot(results)
+ax.set_xticklabels(names)
+plt.show()
+!pip install xgboost
+import xgboost as xgb
+#change the data to a Dmatrix 
+
+D_train  = xgb.DMatrix(X_train, label = y_train)
+D_test = xgb. DMatrix(X_test)
+#features_Test = xgb. DMatrix(features_Test)
+
+#the bojective must be set as per the problem statement , in this case multi:softmax is for classififcationa and takes the value for num_class 
+param = {
+       'eta' : 0.3,
+    'max_depth' : 3,
+    'objective': 'multi:softmax',
+    'num_class' : 2
+}
+
+model = xgb.train(param, D_train, 20)
+y_pred = model.predict(D_test)
+from sklearn.model_selection import GridSearchCV
+KNeighborsClassifier
+params = {
+    'n_neighbors' : [5,25],
+    'weights' : ['uniform','distance'],
+    'algorithm' : ['auto','ball_tree','kd_tree','brute']   
+    
+}
+Among all the models the AdaBoostClassifier seems the best
+model = classifier
+
+#model.fit(X_train,y_train)
+
+y_pred_test = model.predict(features_Test)
+
+y_pred_test  = y_pred_test.astype(int)
+
+submission=pd.DataFrame()
+
+sample_submission = pd.read_csv('sample_submission_eyYijxG.csv')
+
+submission['ID']= sample_submission.ID
+
+submission['Is_Lead']=y_pred_test
+chootu = sample_submission['Is_Lead']
+## function to get confusion matrix in a proper format
+def draw_cm( chootu, y_pred_test ):
+    cm = confusion_matrix( chootu, y_pred_test)
+    sns.heatmap(cm, annot=True,  fmt='.0f', xticklabels = [0,1] , yticklabels = [0,1] )
+    plt.ylabel('Observed')
+    plt.xlabel('Predicted')
+    plt.show()
+draw_cm(chootu,y_pred_test);
+(70101)/(70101+35211)*100
+fpr, tpr, thresholds = roc_curve(y_test ,predictions_ada)
+# Plot ROC curve
+plt.plot([0, 1], [0, 1], 'k--')
+plt.plot(fpr, tpr)
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.show()
+submission.to_csv('Lead Prediction.csv',index=False)
