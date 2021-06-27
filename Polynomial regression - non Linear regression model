@@ -1,0 +1,49 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+Data = pd.read_csv('data (1).csv')
+Data.info()
+Data.describe()
+Data
+---
+print("Null values:", Data['Pressure'].isnull().sum())
+zscore = (Data.Pressure - Data.Pressure.mean()) / Data.Pressure.std()
+#If the z score > 3, Such a data point can be an outlier
+outliers = zscore.loc[abs(zscore) > 3]
+print("Outlier count:", len(outliers))
+----
+features=Data.Temperature.values #or - features= Data.iloc[:,0].values
+labels=Data.Pressure.values #or -labels=Data.Pressure.values
+features.shape
+labels.shape
+
+#better to use the reshape for regression
+labels=labels.reshape(6,1)
+features=features.reshape(6,1)
+labels.shape
+features.shape
+plt.scatter(features, labels)
+
+#What if we apply the linear regression to this problem set
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(features,labels)
+regressor.score(features,labels)
+
+#from the plot we can check that it will not follow any proper prediction pattern - UNDERFITTING
+plt.scatter(features,labels,color='blue')
+plt.plot(features,regressor.predict(features),color='red')
+
+#This method will raise the polynomial degree so that we can work on the transfomred data
+
+from sklearn.preprocessing import PolynomialFeatures
+#root of the equation would be the degree, we need to find the sweet spot by checking the score
+poly = PolynomialFeatures(degree=3)
+x_poly = poly.fit_transform(features)
+regressor.fit(x_poly,labels)
+
+#line now with the use of rasied features
+plt.scatter(features,labels)
+plt.plot(features,regressor.predict(x_poly), color='red')
+regressor.score(x_poly,features)
