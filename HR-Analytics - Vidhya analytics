@@ -1,0 +1,273 @@
+import pandas as pd
+from matplotlib import pyplot
+import statistics
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+Data = pd.read_csv('train_LZdllcl.csv')
+
+Test = pd.read_csv('test_2umaH9m.csv')
+Test = Test.drop(['employee_id'],axis=1)
+
+
+Data1=Data
+target = Data['is_promoted']
+Data = Data.drop(['is_promoted'],axis=1)
+Data = Data.drop(['employee_id'],axis=1)
+
+
+#number of unique values in Data 
+Data.apply(pd.Series.nunique)
+Test.apply(pd.Series.nunique)
+
+##lot of dataFeatures are given, segregating as per the type
+
+quantitative_data = [i for i in Test if Test[i].dtype == np.int64]
+
+print("A total of {} quantitative columns are in data".format(len(quantitative_data)))
+print('\n',quantitative_data,'\n')
+
+qualitative_data = [i for i in Test if Test[i].dtype == np.object]
+
+print("A total of {} object columns are in data".format(len(qualitative_data)))
+
+print('\n',qualitative_data,'\n')
+
+continuous_data = [i for i in Test if Test[i].dtype == np.float64]
+
+print("A total of {} continuous columns are in data".format(len(continuous_data)))
+
+print('\n',continuous_data,'\n')
+##lot of dataFeatures are given, segregating as per the type
+
+quantitative_data = [i for i in Data if Data[i].dtype == np.int64]
+
+print("A total of {} quantitative columns are in data".format(len(quantitative_data)))
+print('\n',quantitative_data,'\n')
+
+qualitative_data = [i for i in Data if Data[i].dtype == np.object]
+
+print("A total of {} object columns are in data".format(len(qualitative_data)))
+
+print('\n',qualitative_data,'\n')
+
+continuous_data = [i for i in Data if Data[i].dtype == np.float64]
+
+print("A total of {} continuous columns are in data".format(len(continuous_data)))
+
+print('\n',continuous_data,'\n')
+
+#NullValues with the help of Heatmap
+
+sns.heatmap(Data.isnull(), cmap="inferno")
+plt.figure(figsize=(16,9))
+
+#NullValues with the help of Heatmap
+sns.heatmap(Test.isnull(), cmap="inferno")
+plt.figure(figsize=(16,9))
+null = Data.isnull().sum().sort_values(ascending=False)
+
+#First sum and order all null values for each variable
+percent = (Data.isnull().sum()/Data.isnull().count()).sort_values(ascending=False) 
+dataType = Data.dtypes
+missing_variables = pd.concat([null, percent,dataType], axis=1, keys=['Total', 'percent','Data Type'])
+missing_variables = missing_variables.head(19)
+missing_variables
+null = Test.isnull().sum().sort_values(ascending=False)
+
+#First sum and order all null values for each variable
+percent = (Test.isnull().sum()/Test.isnull().count()).sort_values(ascending=False) 
+dataType = Test.dtypes
+missing_variables = pd.concat([null, percent,dataType], axis=1, keys=['Total', 'percent','Data Type'])
+missing_variables_test = missing_variables.head(19)
+missing_variables_test
+
+#putting them in the frameowrk on features to do encoding after imputing , finind var and passing float and integer for imputing - Test DATA
+
+Categorical_Test = Test.select_dtypes(include='object') 
+IntegerData_Test = Test.select_dtypes(include='int64') 
+FloatData_Test = Test.select_dtypes(include='float64') 
+
+#putting them in the frameowrk on features to do encoding after imputing , finind var and passing float and integer for imputing - TRAIN DATA
+
+Categorical = Data.select_dtypes(include='object') 
+IntegerData = Data.select_dtypes(include='int64') 
+FloatData = Data.select_dtypes(include='float64') 
+#using the concept of VIF to check for redundant var
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+VIF = pd.DataFrame()
+IntegerData['Intercept'] = 1
+VIF['Independent Variables'] = IntegerData.columns
+VIF['VIF'] = [vif(IntegerData.values, i) for i in range(IntegerData.shape[1])]
+VIF = VIF.set_index('Independent Variables').drop(index = 'Intercept').T
+#no such Feature that has multi col
+VIF
+sns.catplot(x="education", y="age" , hue="is_promoted",data=Data1)
+sns.catplot(x="is_promoted", y="age", hue="region", data=Data1)
+figsize=(15,30)
+Data.hist(figsize=(15,30),layout=(9,3))
+plt.show()
+sns.catplot(x="recruitment_channel", y="age", hue="is_promoted",
+            kind="violin", data=Data1)
+#sourcing and refferal have good chance of conversion into promotion 
+
+sns.catplot(x="KPIs_met >80%", y="recruitment_channel", hue="is_promoted",
+            kind="bar", data=Data1)
+#standard performance acorss all age groups 
+
+sns.scatterplot(Data['avg_training_score'],Data['length_of_service'])
+Categorical['region'].value_counts()
+#imputing the Null values with mode
+
+print(Categorical['education'].value_counts())
+print('******************************************')
+print(Categorical['education'].value_counts())
+from sklearn.impute import SimpleImputer
+
+imp = SimpleImputer(missing_values=np.nan,strategy='most_frequent')
+
+Categorical_Test['education'] = imp.fit_transform(Categorical_Test[['education']]).ravel()
+Categorical_Test['education']=pd.DataFrame(Categorical_Test['education'])
+
+plt.figure(figsize=(8,5))
+sns.boxplot('previous_year_rating',data=Data1)
+
+imp = SimpleImputer(missing_values=np.nan,strategy='most_frequent')
+
+Categorical['education'] = imp.fit_transform(Categorical[['education']]).ravel()
+Categorical['education']=pd.DataFrame(Categorical['education'])
+#Ealier we have listed all the datatypes that are there, now we select only the features with datatype Object in LabelEn and do Label encoding - TRAIN CASE
+
+from sklearn.preprocessing import LabelEncoder
+label_encoder = LabelEncoder()
+Categorical_Test = Categorical_Test.apply(label_encoder.fit_transform)
+#Ealier we have listed all the datatypes that are there, now we select only the features with datatype Object in LabelEn and do Label encoding - TRAIN CASE
+
+from sklearn.preprocessing import LabelEncoder
+label_encoder = LabelEncoder()
+Categorical = Categorical.apply(label_encoder.fit_transform)
+#imputing for the train case dataset 
+
+from sklearn.impute import SimpleImputer
+
+imp = SimpleImputer(missing_values=np.nan,strategy='mean')
+
+FloatData_Test= imp.fit_transform(FloatData_Test)
+FloatData_Test=pd.DataFrame(FloatData_Test)
+FloatData_Test=FloatData_Test.rename(columns = {0:'previous year rating'}, inplace = False)
+#imputing for the train case dataset 
+
+from sklearn.impute import SimpleImputer
+
+imp = SimpleImputer(missing_values=np.nan,strategy='mean')
+
+FloatData= imp.fit_transform(FloatData)
+FloatData=pd.DataFrame(FloatData)
+FloatData=FloatData.rename(columns = {0:'previous year rating'}, inplace = False)
+#a zero variance column will always have exactly one distinct value in the Interger only var
+
+temp = []
+for i in IntegerData_Test.columns:
+    if IntegerData_Test[i].var()==0:
+        temp.append(i)
+print(len(temp))
+print(temp)
+#a zero variance column will always have exactly one distinct value in the Interger only var
+
+temp = []
+for i in IntegerData.columns:
+    if IntegerData[i].var()==0:
+        temp.append(i)
+print(len(temp))
+print(temp)
+
+features = pd.concat([FloatData,Categorical,IntegerData],axis=1)
+features_Test = pd.concat([FloatData_Test,Categorical_Test,IntegerData_Test],axis=1)
+print("Lets look at Ratio of majority to minority")
+Data1['is_promoted'].value_counts()
+
+m = np.ones_like(Data1.drop(columns = 'is_promoted').corr())
+m[np.tril_indices_from(m)]=0
+
+#we saw that we had no multi col, lets take a prespective via plotting
+
+plt.figure(figsize = (15,10))
+sns.heatmap(Data1.drop(columns = 'is_promoted').corr(), annot= True, annot_kws= {'size' : 12},
+           cmap = 'Blues', fmt = '.2f', linewidths= 2, linecolor='white', mask = m,vmin=-1)
+plt.show();
+target.shape,features.shape
+print("Before Sampling")
+
+target.value_counts()
+from imblearn.over_sampling import SMOTE
+
+
+features, target = SMOTE().fit_resample(features, target)
+print("After Sampling")
+
+target.value_counts()
+#standardizing the data
+
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+features = sc.fit_transform(features)
+features_Test = sc.fit_transform(features_Test)
+features_Test = pd.DataFrame(features_Test)
+from sklearn import model_selection
+from sklearn.model_selection import KFold
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score
+from sklearn import metrics
+
+models = []
+models.append(('LogisticRegression', LogisticRegression()))
+models.append(('DecisionTreeClassifier', DecisionTreeClassifier()))
+models.append(('RandomForestClassifier', RandomForestClassifier()))
+models.append(('AdaBoostClassifier', AdaBoostClassifier()))
+models.append(('GaussianNB', GaussianNB()))
+names = []
+results = []
+#The 10-fold cross validation procedure is used to evaluate each algorithm,same random seed to ensure that the same splits happen
+scoring = 'accuracy'
+for name, model in models:
+    kfold = model_selection.KFold(n_splits=10,shuffle=True, random_state=123)
+    cv_results = model_selection.cross_val_score(model, features, target, cv=kfold, scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+    print(msg)
+# boxplot algorithm comparison
+fig = plt.figure(figsize=(12,5))
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot()
+plt.boxplot(results)
+ax.set_xticklabels(names)
+plt.show()
+Among all the models the RandomForestClassifier seems the best
+
+model = LogisticRegression()
+
+model.fit(features, target)
+
+y_pred_test = model.predict(features_Test)
+
+y_pred_test  = y_pred_test.astype(int)
+submission=pd.DataFrame()
+
+sample_submission = pd.read_csv('sample_submission_M0L0uXE.csv')
+
+submission['employee_id']= sample_submission.employee_id
+
+submission['is_promoted']=y_pred_test
+submission
+submission.to_csv('HR_promotion.csv',index=False)
